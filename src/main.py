@@ -1,13 +1,26 @@
-from csv_utils import save_csv, load_csv, count_csv_rows, sum_column
-
-products = [
-    ["title", "price", "count"],
-    ["Ноутбук", 50000, 2],
-    ["Мышь", 1500, 5]
-]
-
-save_csv("products.csv", products)
-
-print(load_csv("products.csv"))
-print("Количество строк:", count_csv_rows("products.csv"))
-print("Сумма столбца price:", sum_column("products.csv", 1))
+from text_utils import normalize_text
+from data_utils import count_items
+from file_utils import save_text, load_text
+from json_utils import save_json, load_json
+ 
+text = "   Мой первый проект на Python   "
+tasks = ["изучить строки", "изучить файлы", "изучить json"]
+ 
+clean_text = normalize_text(text)
+task_count = count_items(tasks)
+ 
+save_text("project_note.txt", clean_text)
+loaded_text = load_text("project_note.txt")
+ 
+config = {
+    "project_name": "my_first_project",
+    "task_count": task_count
+}
+ 
+save_json("project_config.json", config)
+loaded_config = load_json("project_config.json")
+ 
+print("Очищенный текст:", clean_text)
+print("Прочитанный текст из файла:", loaded_text)
+print("Количество задач:", task_count)
+print("Загруженный JSON:", loaded_config)
