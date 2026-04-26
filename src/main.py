@@ -1,13 +1,12 @@
-from csv_utils import save_csv, load_csv, count_csv_rows, sum_column
+from json_utils import save_json, load_json, dict_to_json_text
 
-products = [
-    ["title", "price", "count"],
-    ["Ноутбук", 50000, 2],
-    ["Мышь", 1500, 5]
-]
+config = {
+    "model": "demo",
+    "temperature": 0.7,
+    "max_tokens": 200
+}
 
-save_csv("products.csv", products)
+save_json("config.json", config)
 
-print(load_csv("products.csv"))
-print("Количество строк:", count_csv_rows("products.csv"))
-print("Сумма столбца price:", sum_column("products.csv", 1))
+print(load_json("config.json"))
+print(dict_to_json_text(config))
