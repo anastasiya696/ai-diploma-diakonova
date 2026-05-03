@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 from text_utils import normalize_text
 from data_utils import count_items
 from file_utils import save_text, load_text
@@ -25,7 +25,7 @@ print("Очищенный текст:", clean_text)
 print("Прочитанный текст из файла:", loaded_text)
 print("Количество задач:", task_count)
 print("Загруженный JSON:", loaded_config)
-=======
+
 from data_utils import find_by_name, filter_by_value, count_items
 
 
@@ -40,4 +40,3 @@ print(tasks)
 
 assert len(tasks) == 4
 assert tasks[0]["title"] == "Сделать отчёт"
->>>>>>> 53e1b4e96344f9c94db2f52733e5b57c537350bc
