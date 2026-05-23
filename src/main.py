@@ -1,102 +1,66 @@
-from text_utils import normalize_text, word_count, contains_word
-from data_utils import count_items, find_by_name, filter_by_value
-from file_utils import save_text, load_text
-from csv_utils import save_csv, load_csv
-from json_utils import save_json, load_json
+import sqlite3
 
+print("Модуль sqlite3 подключен")
 
-def show_menu():
-    print("\n===== УЧЕБНЫЙ ПРОЕКТ =====")
-    print("1 - Обработать текст")
-    print("2 - Работа со студентами")
-    print("3 - Работа с файлами")
-    print("0 - Выход")
-    print("==========================\n")
+connection = sqlite3.connect("my_first_database.db")
+print("База данных создана и подключена")
 
+cursor = connection.cursor()
+print("Cursor создан")
 
-def text_mode():
-    text = "   Мой учебный проект по Python   "
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    category TEXT,
+    price INTEGER
+)
+""")
 
-    clean = normalize_text(text)
-    words = word_count(clean)
-    has_python = contains_word(clean, "python")
+print("Таблица products создана")
 
-    print("\n📄 ТЕКСТ:")
-    print("Очищенный:", clean)
-    print("Слов:", words)
-    print("Есть python:", has_python)
+cursor.execute(
+    "INSERT INTO products (title, category, price) VALUES (?, ?, ?)",
+    ("Смартфон", "Электроника", 45000)
+)
 
+cursor.execute(
+    "INSERT INTO products (title, category, price) VALUES (?, ?, ?)",
+    ("Кроссовки", "Одежда", 8500)
+)
 
-def student_mode():
-    students = [
-        {"name": "Анна", "city": "Москва"},
-        {"name": "Иван", "city": "Казань"},
-        {"name": "Ольга", "city": "Москва"}
-    ]
+cursor.execute(
+    "INSERT INTO products (title, category, price) VALUES (?, ?, ?)",
+    ("Кофеварка", "Бытовая техника", 12000)
+)
 
-    print("\n👩‍🎓 СТУДЕНТЫ:")
+print("Товары добавлены")
 
-    print("Найти Иван:", find_by_name(students, "Иван"))
-    print("Из Москвы:", filter_by_value(students, "city", "Москва"))
-    print("Всего:", count_items(students))
+connection.commit()
+print("Изменения сохранены")
 
+cursor.execute("SELECT * FROM products")
 
-def file_mode():
-    text = "пример сохранения данных"
+products = cursor.fetchall()
 
-    save_text("note.txt", text)
-    loaded = load_text("note.txt")
+print(products)
 
-    print("\n📁 ФАЙЛ:")
-    print("Сохранено и прочитано:", loaded)
+assert len(products) >= 3
 
-    # CSV
-    rows = [
-        ["name", "age"],
-        ["Anna", 20],
-        ["Ivan", 21]
-    ]
+for id, title, category, price in products:
+    print(f"ID: {id}, Товар: {title}, Категория: {category}, Цена: {price}")
 
-    save_csv("data.csv", rows)
-    csv_data = load_csv("data.csv")
+cursor.execute(
+    "SELECT * FROM products WHERE price > ?",
+    (10000,)
+)
 
-    print("\n📊 CSV:")
-    print(csv_data)
+expensive_products = cursor.fetchall()
 
-    # JSON
-    data = {
-        "project": "lesson_project",
-        "status": "done"
-    }
+print(expensive_products)
 
-    save_json("data.json", data)
-    json_data = load_json("data.json")
+assert expensive_products is not None
 
-    print("\n🧾 JSON:")
-    print(json_data)
+connection.close()
 
-
-def main():
-    while True:
-        show_menu()
-        choice = input("👉 Введите действие: ").strip()
-
-        if choice == "1":
-            text_mode()
-
-        elif choice == "2":
-            student_mode()
-
-        elif choice == "3":
-            file_mode()
-
-        elif choice == "0":
-            print("👋 Выход из программы")
-            break
-
-        else:
-            print("❌ Неверная команда")
-
-
-if __name__ == "__main__":
-    main()
+print("Соединение с базой данных закрыто")
