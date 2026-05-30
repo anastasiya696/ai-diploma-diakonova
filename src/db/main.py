@@ -1,139 +1,124 @@
 import sqlite3
 
-# Ячейка 1: подключение к БД
-conn = sqlite3.connect("kids_shop_join.db")
-cursor = conn.cursor()
-cursor.execute("PRAGMA foreign_keys = ON")
+# Подключение к базе
+connection = sqlite3.connect('kids_shop_analytics.db')
+cursor = connection.cursor()
 
-print("База создана")
-
-# Ячейка 2: родительская таблица
+# ----------------------------
+# 1. Создание таблицы
+# ----------------------------
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS clients (
-    client_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    full_name TEXT NOT NULL,
-    phone TEXT,
-    city TEXT
-)
-""")
-conn.commit()
-
-print("clients создана")
-
-# Ячейка 3: дочерняя таблица
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS orders (
-    order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE IF NOT EXISTS products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_name TEXT NOT NULL,
-    quantity INTEGER NOT NULL,
-    order_date TEXT,
-    client_id INTEGER,
-    FOREIGN KEY (client_id) REFERENCES clients(client_id)
+    category TEXT NOT NULL,
+    price REAL NOT NULL,
+    stock_quantity INTEGER NOT NULL,
+    age_group INTEGER NOT NULL
 )
 """)
-conn.commit()
+connection.commit()
 
-print("orders создана")
+# ----------------------------
+# 2. Очистка и вставка данных
+# ----------------------------
+cursor.execute("DELETE FROM products")
 
-# Ячейка 4: очистка и родительские данные
-cursor.execute("DELETE FROM orders")
-cursor.execute("DELETE FROM clients")
-
-clients_data = [
-    ("Анна Иванова", "+79991112233", "Москва"),
-    ("Мария Петрова", "+79994445566", "Санкт-Петербург"),
-    ("Елена Сидорова", "+79997778899", "Казань")
+products_data = [
+    ("Конструктор LEGO", "Конструкторы", 2499.99, 15, 6),
+    ("Кукла Барби", "Куклы", 1299.99, 20, 3),
+    ("Мягкий медведь", "Мягкие игрушки", 899.99, 30, 1),
+    ("Машинка Hot Wheels", "Машинки", 399.99, 50, 4),
+    ("Настольная игра Монополия", "Игры", 1999.99, 10, 8),
+    ("Детский самокат", "Транспорт", 3499.99, 8, 5),
+    ("Пазл 500 деталей", "Пазлы", 799.99, 25, 7),
+    ("Набор фломастеров", "Творчество", 299.99, 40, 4),
+    ("Радиоуправляемая машина", "Электронные игрушки", 2799.99, 12, 8),
+    ("Детский рюкзак", "Аксессуары", 1499.99, 18, 6)
 ]
 
 cursor.executemany("""
-INSERT INTO clients (full_name, phone, city)
-VALUES (?, ?, ?)
-""", clients_data)
+INSERT INTO products (product_name, category, price, stock_quantity, age_group)
+VALUES (?, ?, ?, ?, ?)
+""", products_data)
 
-conn.commit()
-print("Клиенты добавлены")
+connection.commit()
 
-# Ячейка 5: получаем id и добавляем заказы
-cursor.execute("SELECT * FROM clients")
-clients = cursor.fetchall()
+# ----------------------------
+# 3. COUNT
+# ----------------------------
+cursor.execute("SELECT COUNT(*) FROM products")
+count = cursor.fetchone()[0]
+print("COUNT:", count)
+assert count >= 10
 
-client_id_1 = clients[0][0]
-client_id_2 = clients[1][0]
+# ----------------------------
+# 4. SUM
+# ----------------------------
+cursor.execute("SELECT SUM(price) FROM products")
+total_price = cursor.fetchone()[0]
+print("SUM price:", total_price)
+assert total_price > 0
 
-orders_data = [
-    ("Конструктор LEGO", 1, "2025-05-01", client_id_1),
-    ("Детская коляска", 1, "2025-05-03", client_id_1),
-    ("Мягкая игрушка", 2, "2025-05-05", client_id_2)
-]
-
-cursor.executemany("""
-INSERT INTO orders (product_name, quantity, order_date, client_id)
-VALUES (?, ?, ?, ?)
-""", orders_data)
-
-conn.commit()
-print("Заказы добавлены")
-
-# Ячейка 6: вывод таблиц
-cursor.execute("SELECT * FROM clients")
-clients = cursor.fetchall()
-
-cursor.execute("SELECT * FROM orders")
-orders = cursor.fetchall()
-
-print("\nCLIENTS:")
-for c in clients:
-    print(c)
-
-print("\nORDERS:")
-for o in orders:
-    print(o)
-
-# Ячейка 7: INNER JOIN
+# ----------------------------
+# 5. AVG / MIN / MAX
+# ----------------------------
 cursor.execute("""
-SELECT clients.full_name, orders.product_name
-FROM clients
-INNER JOIN orders
-ON clients.client_id = orders.client_id
+SELECT AVG(price), MIN(price), MAX(price)
+FROM products
 """)
-print("\nINNER JOIN:", cursor.fetchall())
+avg_price, min_price, max_price = cursor.fetchone()
+print("AVG:", avg_price, "MIN:", min_price, "MAX:", max_price)
+assert max_price >= min_price
 
-# Ячейка 8: INNER JOIN + WHERE
+# ----------------------------
+# 6. GROUP BY
+# ----------------------------
 cursor.execute("""
-SELECT clients.full_name, orders.product_name, clients.city
-FROM clients
-INNER JOIN orders
-ON clients.client_id = orders.client_id
-WHERE clients.city = 'Москва'
+SELECT category, SUM(stock_quantity)
+FROM products
+GROUP BY category
 """)
-print("\nWHERE JOIN:", cursor.fetchall())
+result = cursor.fetchall()
+print("GROUP BY:")
+for category, total in result:
+    print(category, total)
+assert len(result) >= 1
 
-# Ячейка 9: LEFT JOIN
+# ----------------------------
+# 7. ORDER BY
+# ----------------------------
 cursor.execute("""
-SELECT clients.full_name, orders.product_name
-FROM clients
-LEFT JOIN orders
-ON clients.client_id = orders.client_id
+SELECT category, SUM(stock_quantity) AS total
+FROM products
+GROUP BY category
+ORDER BY total DESC
 """)
-print("\nLEFT JOIN:", cursor.fetchall())
+result = cursor.fetchall()
+print("ORDER BY:")
+for category, total in result:
+    print(category, total)
+assert len(result) >= 1
 
-# Ячейка 10: отчёт
+# ----------------------------
+# 8. HAVING + CLOSE
+# ----------------------------
+threshold = 20
+
 cursor.execute("""
-SELECT
-    clients.full_name,
-    COUNT(orders.order_id),
-    COALESCE(SUM(orders.quantity), 0)
-FROM clients
-LEFT JOIN orders
-ON clients.client_id = orders.client_id
-GROUP BY clients.client_id
-""")
+SELECT category, SUM(stock_quantity)
+FROM products
+GROUP BY category
+HAVING SUM(stock_quantity) > ?
+""", (threshold,))
 
-report = cursor.fetchall()
+result = cursor.fetchall()
 
-print("\nREPORT:")
-for r in report:
-    print(r)
+print("HAVING:")
+for category, total in result:
+    print(category, total)
 
-conn.close()
-print("\nГотово")
+assert all(total > threshold for _, total in result)
+
+connection.close()
+print("Connection closed.")
