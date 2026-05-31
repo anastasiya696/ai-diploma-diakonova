@@ -1,124 +1,185 @@
 import sqlite3
 
-# Подключение к базе
-connection = sqlite3.connect('kids_shop_analytics.db')
-cursor = connection.cursor()
+# ---------------------------------
+# Ячейка 1. Подключение sqlite3
+# ---------------------------------
 
-# ----------------------------
-# 1. Создание таблицы
-# ----------------------------
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS products (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_name TEXT NOT NULL,
-    category TEXT NOT NULL,
-    price REAL NOT NULL,
-    stock_quantity INTEGER NOT NULL,
-    age_group INTEGER NOT NULL
-)
-""")
-connection.commit()
+print("Модуль sqlite3 успешно подключён для магазина детских товаров")
 
-# ----------------------------
-# 2. Очистка и вставка данных
-# ----------------------------
-cursor.execute("DELETE FROM products")
+# ---------------------------------
+# Ячейка 2. Функция подключения
+# ---------------------------------
 
-products_data = [
-    ("Конструктор LEGO", "Конструкторы", 2499.99, 15, 6),
-    ("Кукла Барби", "Куклы", 1299.99, 20, 3),
-    ("Мягкий медведь", "Мягкие игрушки", 899.99, 30, 1),
-    ("Машинка Hot Wheels", "Машинки", 399.99, 50, 4),
-    ("Настольная игра Монополия", "Игры", 1999.99, 10, 8),
-    ("Детский самокат", "Транспорт", 3499.99, 8, 5),
-    ("Пазл 500 деталей", "Пазлы", 799.99, 25, 7),
-    ("Набор фломастеров", "Творчество", 299.99, 40, 4),
-    ("Радиоуправляемая машина", "Электронные игрушки", 2799.99, 12, 8),
-    ("Детский рюкзак", "Аксессуары", 1499.99, 18, 6)
-]
+def get_connection(db_name):
+    return sqlite3.connect(db_name)
 
-cursor.executemany("""
-INSERT INTO products (product_name, category, price, stock_quantity, age_group)
-VALUES (?, ?, ?, ?, ?)
-""", products_data)
+connection = get_connection("kids_store.db")
 
-connection.commit()
+print("Подключение к базе данных магазина детских товаров выполнено успешно")
 
-# ----------------------------
-# 3. COUNT
-# ----------------------------
-cursor.execute("SELECT COUNT(*) FROM products")
-count = cursor.fetchone()[0]
-print("COUNT:", count)
-assert count >= 10
+assert connection is not None
 
-# ----------------------------
-# 4. SUM
-# ----------------------------
-cursor.execute("SELECT SUM(price) FROM products")
-total_price = cursor.fetchone()[0]
-print("SUM price:", total_price)
-assert total_price > 0
+# ---------------------------------
+# Ячейка 3. Создание таблицы
+# ---------------------------------
 
-# ----------------------------
-# 5. AVG / MIN / MAX
-# ----------------------------
-cursor.execute("""
-SELECT AVG(price), MIN(price), MAX(price)
-FROM products
-""")
-avg_price, min_price, max_price = cursor.fetchone()
-print("AVG:", avg_price, "MIN:", min_price, "MAX:", max_price)
-assert max_price >= min_price
+def create_table(connection):
+    cursor = connection.cursor()
 
-# ----------------------------
-# 6. GROUP BY
-# ----------------------------
-cursor.execute("""
-SELECT category, SUM(stock_quantity)
-FROM products
-GROUP BY category
-""")
-result = cursor.fetchall()
-print("GROUP BY:")
-for category, total in result:
-    print(category, total)
-assert len(result) >= 1
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS products (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            category TEXT NOT NULL,
+            price REAL NOT NULL,
+            quantity INTEGER NOT NULL
+        )
+    """)
 
-# ----------------------------
-# 7. ORDER BY
-# ----------------------------
-cursor.execute("""
-SELECT category, SUM(stock_quantity) AS total
-FROM products
-GROUP BY category
-ORDER BY total DESC
-""")
-result = cursor.fetchall()
-print("ORDER BY:")
-for category, total in result:
-    print(category, total)
-assert len(result) >= 1
+    connection.commit()
 
-# ----------------------------
-# 8. HAVING + CLOSE
-# ----------------------------
-threshold = 20
+create_table(connection)
 
-cursor.execute("""
-SELECT category, SUM(stock_quantity)
-FROM products
-GROUP BY category
-HAVING SUM(stock_quantity) > ?
-""", (threshold,))
+# ---------------------------------
+# Ячейка 4. Очистка таблицы
+# ---------------------------------
 
-result = cursor.fetchall()
+def clear_table(connection):
+    cursor = connection.cursor()
 
-print("HAVING:")
-for category, total in result:
-    print(category, total)
+    cursor.execute("DELETE FROM products")
 
-assert all(total > threshold for _, total in result)
+    connection.commit()
+
+clear_table(connection)
+
+# ---------------------------------
+# Ячейка 5. Добавление записей
+# ---------------------------------
+
+def add_record(connection, name, category, price, quantity):
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        INSERT INTO products (name, category, price, quantity)
+        VALUES (?, ?, ?, ?)
+    """, (name, category, price, quantity))
+
+    connection.commit()
+
+add_record(connection, "Конструктор LEGO", "Игрушки", 2499.99, 15)
+add_record(connection, "Детская коляска", "Транспорт", 12999.99, 5)
+add_record(connection, "Детский комбинезон", "Одежда", 1999.99, 20)
+
+# ---------------------------------
+# Ячейка 6. Получение всех записей
+# ---------------------------------
+
+def get_all_records(connection):
+    cursor = connection.cursor()
+
+    cursor.execute("SELECT * FROM products")
+
+    return cursor.fetchall()
+
+records = get_all_records(connection)
+
+print("\nВсе записи:")
+for record in records:
+    print(record)
+
+assert len(records) >= 3
+
+# ---------------------------------
+# Ячейка 7. Фильтрация по категории
+# ---------------------------------
+
+def find_by_text_field(connection, value):
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM products WHERE category = ?",
+        (value,)
+    )
+
+    return cursor.fetchall()
+
+result = find_by_text_field(connection, "Игрушки")
+
+print("\nПоиск по категории:")
+for row in result:
+    print(row)
+
+assert len(result) > 0
+
+# ---------------------------------
+# Ячейка 8. Поиск одной записи
+# ---------------------------------
+
+def find_one_record(connection, value):
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM products WHERE name = ?",
+        (value,)
+    )
+
+    return cursor.fetchone()
+
+record = find_one_record(connection, "Конструктор LEGO")
+
+print("\nОдна запись:")
+print(record)
+
+assert record is not None
+
+# ---------------------------------
+# Ячейка 9. UPDATE
+# ---------------------------------
+
+def update_record(connection, name, new_price):
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "UPDATE products SET price = ? WHERE name = ?",
+        (new_price, name)
+    )
+
+    connection.commit()
+
+update_record(connection, "Конструктор LEGO", 2799.99)
+
+updated_record = find_one_record(connection, "Конструктор LEGO")
+
+print("\nПосле обновления:")
+print(updated_record)
+
+assert updated_record[3] == 2799.99
+
+# ---------------------------------
+# Ячейка 10. DELETE
+# ---------------------------------
+
+def delete_record(connection, name):
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "DELETE FROM products WHERE name = ?",
+        (name,)
+    )
+
+    connection.commit()
+
+delete_record(connection, "Детский комбинезон")
+
+records = get_all_records(connection)
+
+print("\nПосле удаления:")
+for record in records:
+    print(record)
+
+assert len(records) == 2
 
 connection.close()
-print("Connection closed.")
+
+print("\nСоединение с базой данных закрыто")
