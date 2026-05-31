@@ -1,27 +1,21 @@
 import sqlite3
 
-# ---------------------------------
-# Ячейка 1. Подключение sqlite3
-# ---------------------------------
-
-print("Модуль sqlite3 успешно подключён для магазина детских товаров")
-
-# ---------------------------------
-# Ячейка 2. Функция подключения
-# ---------------------------------
+# =========================
+# 1. Подключение
+# =========================
 
 def get_connection(db_name):
     return sqlite3.connect(db_name)
 
-connection = get_connection("kids_store.db")
+connection = get_connection("my_kids_world_project.db")
 
-print("Подключение к базе данных магазина детских товаров выполнено успешно")
-
+print("Подключение к базе данных 'Детский мир' выполнено успешно")
 assert connection is not None
 
-# ---------------------------------
-# Ячейка 3. Создание таблицы
-# ---------------------------------
+
+# =========================
+# 2. Создание таблицы
+# =========================
 
 def create_table(connection):
     cursor = connection.cursor()
@@ -40,22 +34,22 @@ def create_table(connection):
 
 create_table(connection)
 
-# ---------------------------------
-# Ячейка 4. Очистка таблицы
-# ---------------------------------
+
+# =========================
+# 3. Очистка таблицы
+# =========================
 
 def clear_table(connection):
     cursor = connection.cursor()
-
     cursor.execute("DELETE FROM products")
-
     connection.commit()
 
 clear_table(connection)
 
-# ---------------------------------
-# Ячейка 5. Добавление записей
-# ---------------------------------
+
+# =========================
+# 4. Добавление записей
+# =========================
 
 def add_record(connection, name, category, price, quantity):
     cursor = connection.cursor()
@@ -67,119 +61,158 @@ def add_record(connection, name, category, price, quantity):
 
     connection.commit()
 
-add_record(connection, "Конструктор LEGO", "Игрушки", 2499.99, 15)
-add_record(connection, "Детская коляска", "Транспорт", 12999.99, 5)
-add_record(connection, "Детский комбинезон", "Одежда", 1999.99, 20)
 
-# ---------------------------------
-# Ячейка 6. Получение всех записей
-# ---------------------------------
+add_record(connection, "Конструктор LEGO", "Игрушки", 2499.99, 15)
+add_record(connection, "Кукла LOL", "Куклы", 1599.99, 20)
+add_record(connection, "Мягкий медведь", "Мягкие игрушки", 899.99, 30)
+add_record(connection, "Детский самокат", "Транспорт", 3499.99, 10)
+add_record(connection, "Набор фломастеров", "Творчество", 299.99, 50)
+
+
+# =========================
+# 5. Получение всех записей
+# =========================
 
 def get_all_records(connection):
     cursor = connection.cursor()
-
     cursor.execute("SELECT * FROM products")
-
     return cursor.fetchall()
 
 records = get_all_records(connection)
 
-print("\nВсе записи:")
-for record in records:
-    print(record)
+print("\nВСЕ ТОВАРЫ:")
+for r in records:
+    print(r)
 
-assert len(records) >= 3
+assert len(records) >= 5
 
-# ---------------------------------
-# Ячейка 7. Фильтрация по категории
-# ---------------------------------
 
-def find_by_text_field(connection, value):
+# =========================
+# 6. Фильтр по категории
+# =========================
+
+def find_by_field(connection, value):
     cursor = connection.cursor()
-
-    cursor.execute(
-        "SELECT * FROM products WHERE category = ?",
-        (value,)
-    )
-
+    cursor.execute("SELECT * FROM products WHERE category = ?", (value,))
     return cursor.fetchall()
 
-result = find_by_text_field(connection, "Игрушки")
+filtered_records = find_by_field(connection, "Игрушки")
 
-print("\nПоиск по категории:")
-for row in result:
-    print(row)
+print("\nФИЛЬТР (Игрушки):")
+for r in filtered_records:
+    print(r)
 
-assert len(result) > 0
+assert len(filtered_records) > 0
 
-# ---------------------------------
-# Ячейка 8. Поиск одной записи
-# ---------------------------------
+
+# =========================
+# 7. Поиск одной записи
+# =========================
 
 def find_one_record(connection, value):
     cursor = connection.cursor()
-
-    cursor.execute(
-        "SELECT * FROM products WHERE name = ?",
-        (value,)
-    )
-
+    cursor.execute("SELECT * FROM products WHERE name = ?", (value,))
     return cursor.fetchone()
 
 record = find_one_record(connection, "Конструктор LEGO")
 
-print("\nОдна запись:")
+print("\nОДНА ЗАПИСЬ:")
 print(record)
 
 assert record is not None
 
-# ---------------------------------
-# Ячейка 9. UPDATE
-# ---------------------------------
+
+# =========================
+# 8. UPDATE
+# =========================
 
 def update_record(connection, name, new_price):
     cursor = connection.cursor()
-
-    cursor.execute(
-        "UPDATE products SET price = ? WHERE name = ?",
-        (new_price, name)
-    )
-
+    cursor.execute("""
+        UPDATE products
+        SET price = ?
+        WHERE name = ?
+    """, (new_price, name))
     connection.commit()
 
 update_record(connection, "Конструктор LEGO", 2799.99)
 
 updated_record = find_one_record(connection, "Конструктор LEGO")
-
-print("\nПосле обновления:")
+print("\nПОСЛЕ UPDATE:")
 print(updated_record)
 
 assert updated_record[3] == 2799.99
 
-# ---------------------------------
-# Ячейка 10. DELETE
-# ---------------------------------
 
-def delete_record(connection, name):
+# =========================
+# 9. GROUP BY (аналитика)
+# =========================
+
+def get_group_report(connection):
     cursor = connection.cursor()
+    cursor.execute("""
+        SELECT category, COUNT(*)
+        FROM products
+        GROUP BY category
+    """)
+    return cursor.fetchall()
 
-    cursor.execute(
-        "DELETE FROM products WHERE name = ?",
-        (name,)
-    )
+report = get_group_report(connection)
 
-    connection.commit()
+print("\nОТЧЁТ ПО КАТЕГОРИЯМ:")
+for r in report:
+    print(r)
 
-delete_record(connection, "Детский комбинезон")
+assert len(report) >= 1
 
-records = get_all_records(connection)
 
-print("\nПосле удаления:")
-for record in records:
-    print(record)
+# =========================
+# 10. TOP-3
+# =========================
 
-assert len(records) == 2
+def get_top_records(connection, limit=3):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT name, category, price, quantity
+        FROM products
+        ORDER BY price DESC
+        LIMIT ?
+    """, (limit,))
+    return cursor.fetchall()
+
+top_records = get_top_records(connection, 3)
+
+print("\nТОП-3 ТОВАРА:")
+for r in top_records:
+    print(r)
+
+assert len(top_records) == 3
+
+
+# =========================
+# ФИНАЛ
+# =========================
+
+print("\n" + "="*50)
+print("ФИНАЛЬНЫЙ ОТЧЁТ ПРОЕКТА 'ДЕТСКИЙ МИР'")
+print("="*50)
+
+print("\nВСЕ ТОВАРЫ:")
+for r in get_all_records(connection):
+    print(r)
+
+print("\nФИЛЬТР (Игрушки):")
+for r in find_by_field(connection, "Игрушки"):
+    print(r)
+
+print("\nОТЧЁТ ПО КАТЕГОРИЯМ:")
+for r in get_group_report(connection):
+    print(r)
+
+print("\nТОП-3:")
+for r in get_top_records(connection, 3):
+    print(r)
 
 connection.close()
 
-print("\nСоединение с базой данных закрыто")
+print("\nСоединение с базой закрыто. Проект завершён.")
