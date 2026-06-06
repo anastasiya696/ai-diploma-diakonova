@@ -1,80 +1,68 @@
-import sqlite3
-import queries as q
+from db.connection import get_connection
+from db.create_tables import create_main_table
+from db.insert_data import seed_demo_products
+from db.queries import get_all_records, find_by_filter, get_top_records
+from db.reports import get_average_value, get_group_report
+from db.formatters import print_table, print_filter, print_top
 
-# подключение к БД
-connection = sqlite3.connect("school.db")
-cursor = connection.cursor()
 
-print("БД подключена")
+def menu():
+    print("""
+==============================
+   ДЕТСКИЙ МИР (SQLite)
+==============================
+1 - Показать все товары
+2 - Фильтр по категории
+3 - Средняя цена
+4 - Отчёт по категориям
+5 - Топ-3 товаров
+0 - Выход
+""")
 
-# ---------- СОЗДАНИЕ ТАБЛИЦ ----------
-cursor.execute(q.CREATE_STUDENTS_TABLE)
-cursor.execute(q.CREATE_GRADES_TABLE)
-connection.commit()
 
-print("Таблицы созданы")
+def main():
+    connection = get_connection()
 
-# ---------- ДОБАВЛЕНИЕ ДАННЫХ ----------
-students = [
-    ("Алина Иванова", "10A", "alina@mail.com", 16, 4.6),
-    ("Максим Петров", "11B", "maxim@mail.com", 17, 4.2)
-]
+    create_main_table(connection)
+    seed_demo_products(connection)
 
-grades = [
-    ("Math", "Алина Иванова", 5, "exam", 1.0),
-    ("Physics", "Максим Петров", 4, "test", 0.5)
-]
+    while True:
+        menu()
+        choice = input("Выберите действие: ")
 
-cursor.executemany(q.INSERT_STUDENT, students)
-cursor.executemany(q.INSERT_GRADE, grades)
+        if choice == "1":
+            print_table(get_all_records(connection))
 
-connection.commit()
+        elif choice == "2":
+            category = input("Введите категорию: ")
+            data = find_by_filter(connection, category)
 
-print("Данные добавлены")
+            print_filter(
+                f"Фильтр: {category}",
+                [f"{r[1]} — {r[3]} руб." for r in data]
+            )
 
-# ---------- SELECT ----------
-cursor.execute(q.SELECT_STUDENTS)
-students_rows = cursor.fetchall()
+        elif choice == "3":
+            print("\nСредняя цена:", round(get_average_value(connection), 2), "руб.")
 
-print("Students:")
-for row in students_rows:
-    print(row)
+        elif choice == "4":
+            print("\nОТЧЁТ ПО КАТЕГОРИЯМ")
+            print("-" * 30)
+            for c, n in get_group_report(connection):
+                print(f"{c:<15} | {n}")
 
-cursor.execute(q.SELECT_GRADES)
-grades_rows = cursor.fetchall()
+        elif choice == "5":
+            print_top(get_top_records(connection))
 
-print("Grades:")
-for row in grades_rows:
-    print(row)
+        elif choice == "0":
+            print("Выход...")
+            break
 
-# ---------- UPDATE ----------
-cursor.execute(q.UPDATE_STUDENT_AGE, (18, "Алина Иванова"))
-connection.commit()
+        else:
+            print("Неверный выбор")
 
-print("UPDATE выполнен")
+    connection.close()
 
-# ---------- DELETE ----------
-cursor.execute("DELETE FROM grades WHERE score = 4")
-connection.commit()
 
-print("DELETE выполнен")
-
-# ---------- ПРОВЕРКИ ----------
-cursor.execute(q.SELECT_STUDENTS)
-assert len(cursor.fetchall()) >= 2
-
-cursor.execute(q.SELECT_GRADES)
-assert len(cursor.fetchall()) >= 1
-
-print("Все проверки пройдены")
-
-# ---------- ЗАКРЫТИЕ ----------
-connection.close()
-
-print("Соединение закрыто")
-import sys
-import os
-
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
-import queries as q
+if __name__ == "__main__":
+    main()

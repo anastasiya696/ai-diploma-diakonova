@@ -1,16 +1,14 @@
-def get_all_categories(cursor):
-    cursor.execute("SELECT * FROM categories")
-    return cursor.fetchall()
+def get_average_value(connection):
+    cursor = connection.cursor()
+    cursor.execute("SELECT AVG(price) FROM products")
+    return cursor.fetchone()[0]
 
 
-def get_all_products(cursor):
-    cursor.execute("SELECT * FROM products")
-    return cursor.fetchall()
-
-
-def get_products_by_category(cursor, category_id):
+def get_group_report(connection):
+    cursor = connection.cursor()
     cursor.execute("""
-    SELECT * FROM products
-    WHERE category_id = ?
-    """, (category_id,))
+        SELECT category, COUNT(*)
+        FROM products
+        GROUP BY category
+    """)
     return cursor.fetchall()
