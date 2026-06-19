@@ -1,135 +1,150 @@
-import numpy as np
-import matplotlib.pyplot as plt
+# 1. Список чисел
 
-# ===== Ячейка 1 =====
-print("Библиотеки импортированы")
+numbers = [5, 12, 27, 34, 48, 63]
 
-# ===== Ячейка 2: y = x^2 =====
-x = np.linspace(-5, 5, 200)
-y = x ** 2
+print("Список чисел:", numbers)
+print("Длина списка:", len(numbers))
 
-plt.figure()
-plt.plot(x, y)
-plt.title("y = x²")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid(True)
-plt.show()
+assert len(numbers) == 6
 
-# ===== Ячейка 3: y = x^3 =====
-x = np.linspace(-5, 5, 200)
-y = x ** 3
 
-plt.figure()
-plt.plot(x, y)
-plt.title("y = x³")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid(True)
-plt.show()
+# 2. Среднее значение
 
-# ===== Ячейка 4: sqrt(x) =====
-x = np.linspace(0, 25, 200)
-y = np.sqrt(x)
+average_value = sum(numbers) / len(numbers)
 
-plt.figure()
-plt.plot(x, y)
-plt.title("y = √x")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid(True)
-plt.show()
+print("Среднее значение:", average_value)
 
-# ===== Ячейка 5: 2^x =====
-x = np.linspace(-2, 2, 200)
-y = 2 ** x
+assert average_value > 0
 
-plt.figure()
-plt.plot(x, y)
-plt.title("y = 2^x")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid(True)
-plt.show()
 
-# ===== Ячейка 6: log(x) =====
-x = np.linspace(0.1, 20, 200)
-y = np.log(x)
+# 3. Максимум и минимум
 
-plt.figure()
-plt.plot(x, y)
-plt.title("y = ln(x)")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid(True)
-plt.show()
+max_value = max(numbers)
+min_value = min(numbers)
 
-# ===== Ячейка 7: sin(x) =====
-x = np.linspace(-2*np.pi, 2*np.pi, 200)
-y = np.sin(x)
+print("Максимум:", max_value)
+print("Минимум:", min_value)
 
-plt.figure()
-plt.plot(x, y)
-plt.title("y = sin(x)")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid(True)
-plt.show()
+assert max_value == 63
+assert min_value == 5
 
-# ===== Ячейка 8: cos(x) =====
-x = np.linspace(-2*np.pi, 2*np.pi, 200)
-y = np.cos(x)
 
-plt.figure()
-plt.plot(x, y)
-plt.title("y = cos(x)")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid(True)
-plt.show()
+# 4. Фильтрация чисел
 
-# ===== Ячейка 9: sin vs cos =====
-x = np.linspace(-2*np.pi, 2*np.pi, 200)
+threshold = 30
+result = []
 
-y_sin = np.sin(x)
-y_cos = np.cos(x)
+for num in numbers:
+    if num > threshold:
+        result.append(num)
 
-plt.figure()
-plt.plot(x, y_sin, label="sin(x)")
-plt.plot(x, y_cos, label="cos(x)")
-plt.title("sin(x) и cos(x)")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid(True)
-plt.legend()
-plt.show()
+print("Числа больше порога:", result)
 
-# ===== Ячейка 10: сравнение функций =====
-x = np.linspace(0.1, 5, 200)
+assert len(result) >= 1
 
-y_linear = x
-y_square = x ** 2
-y_log = np.log(x)
-y_exp = 2 ** x
 
-plt.figure()
-plt.plot(x, y_linear, label="x")
-plt.plot(x, y_square, label="x^2")
-plt.plot(x, y_log, label="log(x)")
-plt.plot(x, y_exp, label="2^x")
+# 5. Словарь товара
 
-plt.title("Сравнение функций")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid(True)
-plt.legend()
-plt.show()
+product = {
+    "name": "Детская коляска",
+    "category": "Транспорт",
+    "price": 15990
+}
 
-summary = [
-    "Линейная функция растёт равномерно",
-    "Квадратичная растёт быстрее линейной",
-    "Логарифм растёт медленно и замедляется",
-    "Экспонента растёт быстрее всех"
+print("Товар:", product)
+print("Название товара:", product["name"])
+
+assert product["price"] > 0
+
+
+# 6. Список словарей
+
+products = [
+    {"name": "Детская коляска", "category": "Транспорт", "price": 15990},
+    {"name": "Автокресло", "category": "Безопасность", "price": 8990},
+    {"name": "Детская кроватка", "category": "Мебель", "price": 12490},
+    {"name": "Развивающий коврик", "category": "Игрушки", "price": 3490}
 ]
 
-print(summary)
+print("\nСписок товаров:")
+
+for product in products:
+    print(product)
+
+assert len(products) == 4
+
+
+# 7. Фильтрация по категории
+
+filtered_items = []
+
+for product in products:
+    if product["category"] == "Игрушки":
+        filtered_items.append(product)
+
+print("\nОтфильтрованные товары:")
+print(filtered_items)
+
+assert len(filtered_items) >= 1
+
+
+# 8. Сортировка по цене
+
+sorted_products = sorted(products, key=lambda x: x["price"])
+
+print("\nТовары по возрастанию цены:")
+
+for product in sorted_products:
+    print(product)
+
+assert sorted_products[0]["price"] <= sorted_products[-1]["price"]
+
+
+# 9. Множество (set)
+
+categories = [
+    "Игрушки",
+    "Мебель",
+    "Игрушки",
+    "Транспорт",
+    "Мебель",
+    "Игрушки"
+]
+
+unique_values = set(categories)
+
+print("\nУникальные категории:")
+print(unique_values)
+
+assert len(unique_values) >= 2
+
+
+# 10. Итоговое задание
+
+products_extended = [
+    {"name": "Детская коляска", "category": "Транспорт", "price": 15990},
+    {"name": "Автокресло", "category": "Безопасность", "price": 8990},
+    {"name": "Развивающий коврик", "category": "Игрушки", "price": 3490},
+    {"name": "Конструктор", "category": "Игрушки", "price": 4990}
+]
+
+filtered_items = []
+
+for product in products_extended:
+    if product["category"] == "Игрушки":
+        filtered_items.append(product)
+
+sorted_items = sorted(
+    filtered_items,
+    key=lambda x: x["price"],
+    reverse=True
+)
+
+best_item = sorted_items[0]
+
+print("\nЛучшая игрушка:")
+print(best_item)
+
+assert best_item["price"] == 4990
+
+print("\nВсе задания выполнены успешно!")
