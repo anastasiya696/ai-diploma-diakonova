@@ -3,61 +3,52 @@ import matplotlib.pyplot as plt
 
 
 # =========================
-# IMPORT (из ноутбука)
+# LOSS + GRADIENT
 # =========================
 
-print("Notebook: Loss + Summary")
+# создаём x
+x = np.linspace(-5, 5, 200)
 
+# loss = x^2
+loss = x ** 2
 
-# =========================
-# LOSS EXPERIMENT
-# =========================
-
-# epochs
-epochs = list(range(1, 21))
-
-# smooth loss (плавно убывает)
-smooth_loss = np.linspace(2.0, 0.5, 20)
-
-# jump loss (скачки)
-jump_loss = [
-    2.0, 1.8, 2.1, 1.6, 1.9,
-    1.4, 1.7, 1.2, 1.5, 1.1,
-    1.3, 0.9, 1.0, 0.8, 0.95,
-    0.7, 0.85, 0.6, 0.55, 0.5
-]
+# gradient = 2x
+gradient = 2 * x
 
 # график
 plt.figure()
-plt.plot(epochs, smooth_loss, label="smooth loss")
-plt.plot(epochs, jump_loss, label="jump loss")
 
-plt.title("Smooth vs Jump Loss")
+plt.plot(x, loss, label="loss = x^2")
+plt.plot(x, gradient, label="gradient = 2x")
+
+# минимум
+plt.scatter([0], [0], color="red", label="minimum (0,0)")
+
+plt.title("Loss and Gradient")
 plt.grid(True)
 plt.legend()
+
 plt.show()
 
-
-# assert
-assert smooth_loss[-1] < smooth_loss[0]
+# FIXED ASSERT (важно!)
+assert np.isclose(loss.min(), 0)
 
 
 # =========================
-# SUMMARY BLOCK
+# SUMMARY
 # =========================
 
 summary = [
-    "Функции могут быть гладкими или с разрывами",
-    "Графики помогают анализировать данные",
-    "Loss может уменьшаться по-разному",
-    "Алгоритмы работают пошагово",
-    "Проверка результатов важна"
+    "Loss показывает ошибку модели",
+    "Градиент показывает направление изменения функции",
+    "Минимум функции находится в точке x = 0",
+    "Квадратичная функция всегда неотрицательна",
+    "Производная помогает находить экстремумы"
 ]
 
 for item in summary:
     print(item)
 
-# assert
 assert len(summary) == 5
 
 
