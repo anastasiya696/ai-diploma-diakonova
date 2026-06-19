@@ -2,168 +2,83 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# -----------------------------
-# 1. Список чисел
-# -----------------------------
-numbers = [5, 12, 27, 34, 48, 63]
 
-print("Список чисел:", numbers)
-print("Длина списка:", len(numbers))
+# =========================
+# 1. x_values около 3
+# =========================
 
-assert len(numbers) == 6
+x_values = np.linspace(2.5, 3.5, 10)
 
+# original function (x^2 - 9)/(x - 3)
+original_values = (x_values**2 - 9) / (x_values - 3)
 
-# -----------------------------
-# 2. Среднее значение
-# -----------------------------
-average_value = sum(numbers) / len(numbers)
+# убрать бесконечности (x=3)
+original_values = np.where(np.isfinite(original_values), original_values, np.nan)
 
-print("Среднее значение:", average_value)
+# simple function
+simple_values = x_values + 3
 
-assert average_value > 0
+df = pd.DataFrame({
+    "x": x_values,
+    "(x^2 - 9)/(x - 3)": original_values,
+    "x + 3": simple_values
+})
 
-
-# -----------------------------
-# 3. max / min
-# -----------------------------
-max_value = max(numbers)
-min_value = min(numbers)
-
-print("Максимум:", max_value)
-print("Минимум:", min_value)
-
-assert max_value == 63
-assert min_value == 5
+print(df)
 
 
-# -----------------------------
-# 4. Фильтрация чисел
-# -----------------------------
-threshold = 30
-result = []
+# =========================
+# 2. LIMIT GRAPH (левая и правая часть)
+# =========================
 
-for num in numbers:
-    if num > threshold:
-        result.append(num)
+x_left = np.linspace(1, 2.99, 50)
+x_right = np.linspace(3.01, 5, 50)
 
-print("Числа > 30:", result)
+y_left = 2 * x_left
+y_right = 2 * x_right
 
-assert len(result) >= 1
-
-
-# -----------------------------
-# 5. Словарь товара
-# -----------------------------
-product = {
-    "name": "Детская коляска",
-    "category": "Транспорт",
-    "price": 15990
-}
-
-print("Товар:", product)
-print("Название:", product["name"])
-
-assert product["price"] > 0
-
-
-# -----------------------------
-# 6. Список словарей
-# -----------------------------
-products = [
-    {"name": "Детская коляска", "category": "Транспорт", "price": 15990},
-    {"name": "Автокресло", "category": "Безопасность", "price": 8990},
-    {"name": "Детская кроватка", "category": "Мебель", "price": 12490},
-    {"name": "Развивающий коврик", "category": "Игрушки", "price": 3490}
-]
-
-for p in products:
-    print(p)
-
-assert len(products) == 4
-
-
-# -----------------------------
-# 7. Фильтрация по категории
-# -----------------------------
-filtered_items = []
-
-for p in products:
-    if p["category"] == "Игрушки":
-        filtered_items.append(p)
-
-print("Игрушки:", filtered_items)
-
-assert len(filtered_items) >= 1
-
-
-# -----------------------------
-# 8. Сортировка по цене
-# -----------------------------
-sorted_products = sorted(products, key=lambda x: x["price"])
-
-for p in sorted_products:
-    print(p)
-
-assert sorted_products[0]["price"] <= sorted_products[-1]["price"]
-
-
-# -----------------------------
-# 9. SET (уникальные значения)
-# -----------------------------
-categories = ["Игрушки", "Мебель", "Игрушки", "Транспорт", "Мебель"]
-
-unique_values = set(categories)
-
-print("Уникальные категории:", unique_values)
-
-assert len(unique_values) >= 2
-
-
-# -----------------------------
-# 10. Итоговое задание
-# -----------------------------
-products_extended = [
-    {"name": "Коляска", "category": "Транспорт", "price": 15990},
-    {"name": "Автокресло", "category": "Безопасность", "price": 8990},
-    {"name": "Коврик", "category": "Игрушки", "price": 3490},
-    {"name": "Конструктор", "category": "Игрушки", "price": 4990}
-]
-
-filtered_items = [p for p in products_extended if p["category"] == "Игрушки"]
-
-sorted_items = sorted(filtered_items, key=lambda x: x["price"], reverse=True)
-
-best_item = sorted_items[0]
-
-print("Лучшая игрушка:", best_item)
-
-assert best_item["price"] == 4990
-
-
-# -----------------------------
-# 11. График loss
-# -----------------------------
-epochs = list(range(1, 11))
-loss = [10, 8.2, 6.5, 5.1, 4.0, 3.2, 2.6, 2.1, 1.7, 1.3]
-
-plt.plot(epochs, loss, marker="o")
-plt.title("Loss over epochs")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
+plt.figure()
+plt.plot(x_left, y_left, label="left")
+plt.plot(x_right, y_right, label="right")
+plt.scatter([3], [6], color="red", label="limit point (3,6)")
+plt.legend()
+plt.grid(True)
 plt.show()
 
-assert loss[-1] < loss[0]
+
+# =========================
+# 3. TRAINING METRIC
+# =========================
+
+epochs = list(range(1, 21))
+
+metric = [
+    0.2, 0.35, 0.5, 0.62, 0.7,
+    0.78, 0.83, 0.87, 0.9, 0.92,
+    0.93, 0.935, 0.94, 0.942, 0.943,
+    0.944, 0.9445, 0.9447, 0.9448, 0.945
+]
+
+plt.figure()
+plt.plot(epochs, metric, label="metric")
+plt.axhline(y=0.95, color="red", linestyle="--", label="limit ~0.95")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+assert metric[-1] > metric[0]
 
 
-# -----------------------------
-# 12. SUMMARY
-# -----------------------------
+# =========================
+# 4. SUMMARY
+# =========================
+
 summary = [
-    "Данные обработаны",
-    "Фильтрация выполнена",
-    "Сортировка выполнена",
-    "Графики построены",
-    "Анализ завершён"
+    "Алгоритм — это последовательность шагов",
+    "Структуры данных помогают работать с информацией",
+    "Графики показывают поведение функций",
+    "Пределы помогают анализировать поведение функции",
+    "Метрики в AI обычно растут и стабилизируются"
 ]
 
 for s in summary:
@@ -171,4 +86,4 @@ for s in summary:
 
 assert len(summary) == 5
 
-print("\nВСЕ ЗАДАНИЯ ВЫПОЛНЕНЫ УСПЕШНО")
+print("ALL TASKS DONE")
