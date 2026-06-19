@@ -1,55 +1,42 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 # =========================
-# LOSS + GRADIENT
+# 1. ANALYSIS POINTS
 # =========================
 
-# создаём x
-x = np.linspace(-5, 5, 200)
+points = np.linspace(-5, 5, 20)
 
-# loss = x^2
-loss = x ** 2
+for x in points:
+    derivative = 2 * x + 3
 
-# gradient = 2x
-gradient = 2 * x
+    if derivative > 0:
+        status = "растёт"
+    elif derivative < 0:
+        status = "убывает"
+    else:
+        status = "возможный экстремум"
 
-# график
-plt.figure()
-
-plt.plot(x, loss, label="loss = x^2")
-plt.plot(x, gradient, label="gradient = 2x")
-
-# минимум
-plt.scatter([0], [0], color="red", label="minimum (0,0)")
-
-plt.title("Loss and Gradient")
-plt.grid(True)
-plt.legend()
-
-plt.show()
-
-# FIXED ASSERT (важно!)
-assert np.isclose(loss.min(), 0)
+    print(f"x = {x:.2f}, derivative = {derivative:.2f} → функция {status}")
 
 
 # =========================
-# SUMMARY
+# 2. RULES SUMMARY
 # =========================
 
-summary = [
-    "Loss показывает ошибку модели",
-    "Градиент показывает направление изменения функции",
-    "Минимум функции находится в точке x = 0",
-    "Квадратичная функция всегда неотрицательна",
-    "Производная помогает находить экстремумы"
+rules = [
+    "Производная показывает скорость изменения функции",
+    "Если производная > 0, функция растёт",
+    "Если производная < 0, функция убывает",
+    "Если производная = 0, возможен экстремум",
+    "Касательная показывает локальное поведение функции",
+    "График помогает визуально понимать поведение функции"
 ]
 
-for item in summary:
-    print(item)
+for rule in rules:
+    print(rule)
 
-assert len(summary) == 5
+assert len(rules) == 6
 
 
 print("DONE")
