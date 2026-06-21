@@ -1,0 +1,8 @@
+
+PROJECT: Loss Optimization
+
+Start x: -2.0
+Start loss: 37.0
+
+Final x: 3.9996343841559936
+Final loss: 1.0000001336749453
