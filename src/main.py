@@ -1,82 +1,59 @@
-import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
+
+from src.optimization import gradient_descent
+from src.visualization import show_loss_graph
+from src.report_utils import save_report
 
 
-# =========================
-# FUNCTION + GRADIENT
-# =========================
+def main():
+    print("START PROJECT")
 
-# f(x)
-def f(x):
-    return -x**2 + 9
+    show_loss_graph()
 
-# df(x)
-def df(x):
-    return -2 * x
+    history = gradient_descent(
+        start_x=-2,
+        learning_rate=0.2,
+        steps=20
+    )
 
+    df = pd.DataFrame(history)
+    print(df)
 
-# =========================
-# GRADIENT ASCENT
-# =========================
+    final_x = df["x"].iloc[-1]
+    final_loss = df["loss"].iloc[-1]
 
-x_current = 5.0
-learning_rate = 0.1
+    start_x = df["x"].iloc[0]
+    start_loss = df["loss"].iloc[0]
 
-history_x = []
-history_y = []
+    report = f"""
+PROJECT: Loss Optimization
 
-for _ in range(15):
-    history_x.append(x_current)
-    history_y.append(f(x_current))
+Start x: {start_x}
+Start loss: {start_loss}
 
-    gradient = df(x_current)
+Final x: {final_x}
+Final loss: {final_loss}
+"""
 
-    # градиентный подъём (ВАЖНО)
-    x_current = x_current + learning_rate * gradient
+    save_report(report, "data/project_report.txt")
 
+    print("REPORT SAVED")
 
-print("Финальное x:", x_current)
-print("Финальное f(x):", f(x_current))
+    summary = [
+        "Функция потерь имеет минимум в точке x = 4",
+        "Градиентный спуск успешно приближает значение к минимуму",
+        "Loss уменьшается с каждой итерацией",
+        "Производная показывает направление изменения функции",
+        "Алгоритм стабильно сходится к оптимальному решению",
+        "Модульная структура упрощает анализ и поддержку проекта"
+    ]
 
-# корректный assert для подъёма к максимуму
-assert abs(x_current) < 1
+    for item in summary:
+        print(item)
 
-
-# =========================
-# VISUALIZATION
-# =========================
-
-x = np.linspace(-5, 5, 200)
-y = -x**2 + 9
-
-plt.plot(x, y, label="f(x) = -x^2 + 9")
-plt.scatter(history_x, history_y, label="gradient ascent path")
-
-plt.title("Gradient Ascent on Quadratic Function")
-plt.grid(True)
-plt.legend()
-plt.show()
-
-# путь должен расти (мы идём к максимуму)
-assert history_y[-1] > history_y[0]
+    assert len(summary) == 6
+    assert final_loss < start_loss
 
 
-# =========================
-# SUMMARY
-# =========================
-
-summary = [
-    "Градиент показывает направление роста функции",
-    "В точке максимума производная равна 0",
-    "Градиентный подъём увеличивает значение функции",
-    "Функция -x^2 + 9 имеет максимум в x = 0",
-    "Итеративные методы находят экстремумы численно"
-]
-
-for item in summary:
-    print(item)
-
-assert len(summary) == 5
-
-
-print("DONE")
+if __name__ == "__main__":
+    main()
