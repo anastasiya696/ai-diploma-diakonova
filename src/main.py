@@ -1,17 +1,20 @@
 """
 Сквозной проект блока 4.
 
+Проект по анализу поведения покупателей.
+
 Используются темы занятий 1-11:
 - математическая статистика;
 - теория вероятностей;
+- формула Байеса;
 - bootstrap;
 - корреляция;
 - линейная регрессия;
 - A/B-тестирование;
-- линейная алгебра.
+- линейная алгебра;
+- визуализация.
 
-Проект работает с данными студентов и рассчитывает
-показатели успеваемости и риск низкого результата.
+Данные генерируются внутри проекта.
 """
 
 from pathlib import Path
@@ -19,22 +22,57 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.block04_stats import mean, median, std_sample
-from src.block04_probability import prob_event, prob_conditional
-from src.block04_bootstrap import bootstrap_ci_mean
-from src.block04_correlation import corr_pearson
+from src.block04_stats import (
+    describe,
+    trimmed_mean,
+)
+
+from src.block04_probability import (
+    prob_event,
+    prob_conditional,
+    contingency_2x2,
+)
+
+from src.block04_bayes import (
+    build_binary_counts,
+    prob_from_counts,
+    bayes_posterior,
+    score_buy_probability,
+    laplace_smooth_prob,
+)
+
+from src.block04_bootstrap import (
+    bootstrap_ci_mean,
+)
+
+from src.block04_correlation import (
+    corr_pearson,
+)
+
 from src.block04_regression import (
     fit_linear_regression_1d,
     predict_linear_1d,
     mse,
 )
+
 from src.block04_hypothesis import (
     permutation_test_diff_means,
     p_value_two_sided,
+    decision,
+    cohens_d,
 )
+
 from src.block04_linear_algebra import (
     cosine_similarity,
     matvec,
+)
+
+from src.block04_visualization import (
+    save_histogram,
+    save_scatter,
+    save_regression_plot,
+    save_bar_chart,
+    save_vectors_2d,
 )
 
 
@@ -50,61 +88,118 @@ REPORTS_DIR = BASE_DIR / "reports"
 DATA_DIR.mkdir(exist_ok=True)
 REPORTS_DIR.mkdir(exist_ok=True)
 
+DATA_PATH = DATA_DIR / "customer_behavior.csv"
+
 
 # ============================================================
-# Поиск исходного файла
+# Генерация данных покупателей
 # ============================================================
 
-data_path = DATA_DIR / "student_engagement.csv"
+def generate_data(
+    n: int = 500,
+    seed: int = 42,
+) -> pd.DataFrame:
+    """Создать демонстрационный датасет покупателей."""
 
+    if n <= 0:
+        raise ValueError("n must be positive")
 
-def load_data() -> pd.DataFrame:
-    """
-    Загрузка данных студентов.
-
-    Если файла student_engagement.csv нет,
-    создаём небольшой демонстрационный датасет.
-    """
-
-    if data_path.exists():
-        return pd.read_csv(data_path)
-
-    rng = np.random.default_rng(42)
-
-    n = 100
+    rng = np.random.default_rng(seed)
 
     df = pd.DataFrame(
         {
-            "student_id": np.arange(1, n + 1),
-            "practice_hours": rng.uniform(1, 15, n),
-            "attendance": rng.uniform(50, 100, n),
-            "assignments_completed": rng.integers(3, 11, n),
+            "customer_id": np.arange(1, n + 1),
+
+            "product_views": rng.integers(
+                1,
+                30,
+                n,
+            ),
+
+            "clicks": rng.integers(
+                0,
+                10,
+                n,
+            ),
+
+            "cart_additions": rng.integers(
+                0,
+                5,
+                n,
+            ),
+
+            "discount": rng.choice(
+                [0, 5, 10, 15, 20],
+                size=n,
+            ),
+
+            "review_views": rng.integers(
+                0,
+                10,
+                n,
+            ),
+
+            "group": rng.choice(
+                ["A", "B"],
+                size=n,
+            ),
         }
     )
 
-    noise = rng.normal(0, 5, n)
+    # --------------------------------------------------------
+    # Вероятность покупки
+    # --------------------------------------------------------
 
-    df["final_score"] = (
-        35
-        + 2.5 * df["practice_hours"]
-        + 0.25 * df["attendance"]
-        + 1.5 * df["assignments_completed"]
-        + noise
+    purchase_score = (
+        0.02
+        + df["clicks"] * 0.025
+        + df["cart_additions"] * 0.08
+        + df["review_views"] * 0.01
+        + df["discount"] * 0.005
     )
 
-    df["final_score"] = df["final_score"].clip(0, 100)
-
-    df["passed"] = df["final_score"] >= 60
-
-    df["high_attendance"] = df["attendance"] >= 80
-
-    df["risk_score"] = (
-        (100 - df["attendance"]) * 0.4
-        + (10 - df["assignments_completed"]) * 4
-        + (60 - df["final_score"]).clip(lower=0) * 0.6
+    purchase_score = purchase_score.clip(
+        0,
+        0.95,
     )
 
-    df.to_csv(data_path, index=False)
+    df["purchase"] = (
+        rng.random(n) < purchase_score
+    )
+
+    # --------------------------------------------------------
+    # Сумма покупки
+    # --------------------------------------------------------
+
+    base_amount = (
+        500
+        + df["product_views"] * 80
+        + df["clicks"] * 150
+        + df["cart_additions"] * 500
+        + df["discount"] * 20
+    )
+
+    noise = rng.normal(
+        0,
+        500,
+        n,
+    )
+
+    df["purchase_amount"] = np.where(
+        df["purchase"],
+        np.maximum(
+            base_amount + noise,
+            100,
+        ),
+        0,
+    )
+
+    df["purchase"] = df["purchase"].astype(bool)
+
+    df.to_csv(
+        DATA_PATH,
+        index=False,
+    )
 
     return df
 
@@ -113,24 +208,43 @@ def load_data() -> pd.DataFrame:
 # 1. Математическая статистика
 # ============================================================
 
-def calculate_statistics(df: pd.DataFrame) -> dict:
-    scores = df["final_score"].to_numpy(dtype=float)
+def calculate_statistics(
+    df: pd.DataFrame,
+) -> dict:
+    """Рассчитать статистики суммы покупок."""
 
-    score_mean = mean(scores)
-    score_median = median(scores)
-    score_std = std_sample(scores)
+    amounts = df.loc[
+        df["purchase"],
+        "purchase_amount",
+    ].to_numpy(dtype=float)
+
+    if len(amounts) < 2:
+        raise ValueError(
+            "Недостаточно покупок для статистики"
+        )
+
+    stats = describe(amounts)
+
+    trimmed = trimmed_mean(
+        amounts,
+        proportion_to_cut=0.1,
+    )
 
     ci_low, ci_high = bootstrap_ci_mean(
-        scores,
+        amounts,
         n_boot=2000,
         alpha=0.05,
         seed=42,
     )
 
     return {
-        "score_mean": score_mean,
-        "score_median": score_median,
-        "score_std": score_std,
+        "n_purchases": len(amounts),
+        "mean": stats["mean"],
+        "median": stats["median"],
+        "std": stats["std_sample"],
+        "min": stats["min"],
+        "max": stats["max"],
+        "trimmed_mean": trimmed,
         "ci_low": ci_low,
         "ci_high": ci_high,
     }
@@ -140,95 +254,158 @@ def calculate_statistics(df: pd.DataFrame) -> dict:
 # 2. Теория вероятностей
 # ============================================================
 
-def calculate_probability(df: pd.DataFrame) -> dict:
+def calculate_probability(
+    df: pd.DataFrame,
+) -> dict:
+    """Рассчитать вероятности событий."""
+
     records = df.to_dict("records")
 
-    p_pass = prob_event(
+    p_purchase = prob_event(
         records,
-        lambda row: bool(row["passed"]),
+        lambda row: bool(row["purchase"]),
     )
 
-    p_pass_high_att = prob_conditional(
+    p_purchase_click = prob_conditional(
         records,
-        condition_func=lambda row: bool(row["high_attendance"]),
-        event_func=lambda row: bool(row["passed"]),
+        condition_func=lambda row: bool(
+            row["clicks"] > 0
+        ),
+        event_func=lambda row: bool(
+            row["purchase"]
+        ),
     )
 
-    low_attendance = prob_conditional(
+    p_purchase_no_click = prob_conditional(
         records,
-        condition_func=lambda row: not bool(row["high_attendance"]),
-        event_func=lambda row: bool(row["passed"]),
+        condition_func=lambda row: not bool(
+            row["clicks"] > 0
+        ),
+        event_func=lambda row: bool(
+            row["purchase"]
+        ),
+    )
+
+    table = contingency_2x2(
+        records,
+        "purchase",
+        "group",
     )
 
     return {
-        "p_pass": p_pass,
-        "p_pass_high_att": p_pass_high_att,
-        "p_pass_low_att": low_attendance,
+        "p_purchase": p_purchase,
+        "p_purchase_click": p_purchase_click,
+        "p_purchase_no_click": p_purchase_no_click,
+        "contingency": table,
     }
 
 
 # ============================================================
-# 3. A/B-сравнение
+# 3. Формула Байеса
 # ============================================================
 
-def calculate_ab_test(df: pd.DataFrame) -> dict:
-    """
-    Простое A/B-сравнение.
+def calculate_bayes(
+    df: pd.DataFrame,
+) -> dict:
+    """Расчёт вероятности покупки по Байесу."""
 
-    Группа A — студенты с practice_hours ниже медианы.
-    Группа B — студенты с practice_hours выше или равным медиане.
-    """
+    records = df.to_dict("records")
 
-    median_practice = df["practice_hours"].median()
+    for row in records:
+        row["clicked"] = bool(row["clicks"] > 0)
 
-    scores_a = df.loc[
-        df["practice_hours"] < median_practice,
-        "final_score",
-    ].to_numpy(dtype=float)
-
-    scores_b = df.loc[
-        df["practice_hours"] >= median_practice,
-        "final_score",
-    ].to_numpy(dtype=float)
-
-    mean_a = mean(scores_a)
-    mean_b = mean(scores_b)
-
-    diff_obs = mean_b - mean_a
-
-    diffs_perm = permutation_test_diff_means(
-        scores_a,
-        scores_b,
-        n_perm=2000,
-        seed=42,
+    counts = build_binary_counts(
+        records,
+        "purchase",
+        "clicked",
     )
 
-    p_value = p_value_two_sided(
-        diff_obs,
-        diffs_perm,
+    p_purchase = prob_from_counts(
+        counts["count_a"],
+        counts["n"],
+    )
+
+    p_clicked = prob_from_counts(
+        counts["count_b"],
+        counts["n"],
+    )
+
+    p_purchase_given_clicked = prob_from_counts(
+        counts["count_ab"],
+        counts["count_b"],
+    )
+
+    p_clicked_given_purchase = prob_from_counts(
+        counts["count_ab"],
+        counts["count_a"],
+    )
+
+    posterior = bayes_posterior(
+        p_clicked_given_purchase,
+        p_purchase,
+        p_clicked,
+    )
+
+    smoothed = laplace_smooth_prob(
+        counts["count_ab"],
+        counts["count_b"],
+    )
+
+    score_clicked = score_buy_probability(
+        True,
+        p_purchase_given_clicked,
+        probability_if_no_click := prob_conditional(
+            records,
+            condition_func=lambda row: not row["clicked"],
+            event_func=lambda row: bool(row["purchase"]),
+        ),
     )
 
     return {
-        "scores_a": scores_a,
-        "scores_b": scores_b,
-        "mean_a": mean_a,
-        "mean_b": mean_b,
-        "diff_obs": diff_obs,
-        "p_value": p_value,
+        "p_purchase": p_purchase,
+        "p_clicked": p_clicked,
+        "p_purchase_given_clicked": p_purchase_given_clicked,
+        "bayes_posterior": posterior,
+        "laplace_probability": smoothed,
+        "score_clicked": score_clicked,
     }
 
 
 # ============================================================
-# 4. Корреляция и регрессия
+# 4. Корреляция и линейная регрессия
 # ============================================================
 
-def calculate_regression(df: pd.DataFrame) -> dict:
-    x = df["practice_hours"].to_numpy(dtype=float)
-    y = df["final_score"].to_numpy(dtype=float)
+def calculate_regression(
+    df: pd.DataFrame,
+) -> dict:
+    """Исследовать связь просмотров и суммы покупки."""
 
-    corr = corr_pearson(x, y)
+    purchased = df.loc[
+        df["purchase"],
+    ]
 
-    a, b = fit_linear_regression_1d(x, y)
+    if len(purchased) < 2:
+        raise ValueError(
+            "Недостаточно покупок для регрессии"
+        )
+
+    x = purchased[
+        "product_views"
+    ].to_numpy(dtype=float)
+
+    y = purchased[
+        "purchase_amount"
+    ].to_numpy(dtype=float)
+
+    correlation = corr_pearson(
+        x,
+        y,
+    )
+
+    a, b = fit_linear_regression_1d(
+        x,
+        y,
+    )
 
     y_hat = predict_linear_1d(
         x,
@@ -236,10 +413,16 @@ def calculate_regression(df: pd.DataFrame) -> dict:
         b,
     )
 
-    error = mse(y, y_hat)
+    error = mse(
+        y,
+        y_hat,
+    )
 
     return {
-        "corr": corr,
+        "x": x,
+        "y": y,
+        "y_hat": y_hat,
+        "correlation": correlation,
         "a": a,
         "b": b,
         "mse": error,
@@ -247,294 +430,366 @@ def calculate_regression(df: pd.DataFrame) -> dict:
 
 
 # ============================================================
-# 5. Линейная алгебра
+# 5. A/B-тестирование
 # ============================================================
 
-def calculate_linear_algebra(df: pd.DataFrame) -> dict:
-    """
-    Представляем студентов как векторы признаков:
+def calculate_ab_test(
+    df: pd.DataFrame,
+) -> dict:
+    """Сравнить сумму покупок групп A и B."""
 
-    [practice_hours, attendance, assignments_completed]
-    """
+    group_a = df.loc[
+        (df["group"] == "A")
+        & df["purchase"],
+        "purchase_amount",
+    ].to_numpy(dtype=float)
+
+    group_b = df.loc[
+        (df["group"] == "B")
+        & df["purchase"],
+        "purchase_amount",
+    ].to_numpy(dtype=float)
+
+    if len(group_a) < 2 or len(group_b) < 2:
+        raise ValueError(
+            "Недостаточно данных для A/B-теста"
+        )
+
+    mean_a = float(np.mean(group_a))
+    mean_b = float(np.mean(group_b))
+
+    diff = mean_b - mean_a
+
+    diffs_perm = permutation_test_diff_means(
+        group_a,
+        group_b,
+        n_perm=2000,
+        seed=42,
+    )
+
+    p_value = p_value_two_sided(
+        diff,
+        diffs_perm,
+    )
+
+    result = decision(
+        p_value,
+        alpha=0.05,
+    )
+
+    effect = cohens_d(
+        group_a,
+        group_b,
+    )
+
+    return {
+        "mean_a": mean_a,
+        "mean_b": mean_b,
+        "diff": diff,
+        "p_value": p_value,
+        "decision": result,
+        "cohens_d": effect,
+        "group_a": group_a,
+        "group_b": group_b,
+    }
+
+
+# ============================================================
+# 6. Линейная алгебра
+# ============================================================
+
+def calculate_linear_algebra(
+    df: pd.DataFrame,
+) -> dict:
+    """Cosine similarity и матричное умножение."""
 
     features = df[
         [
-            "practice_hours",
-            "attendance",
-            "assignments_completed",
+            "product_views",
+            "clicks",
+            "cart_additions",
+            "discount",
         ]
     ].to_numpy(dtype=float)
 
-    # Нормируем признаки, чтобы разные масштабы
-    # не искажали cosine similarity.
-    features_normalized = (
-        features - features.mean(axis=0)
-    ) / features.std(axis=0)
+    means = features.mean(axis=0)
+    stds = features.std(axis=0)
+
+    stds[stds == 0] = 1
+
+    normalized = (
+        features - means
+    ) / stds
 
     target_idx = 0
 
-    target_vector = features_normalized[target_idx]
+    target = normalized[
+        target_idx
+    ]
 
     similarities = []
 
-    for i, vector in enumerate(features_normalized):
+    for i, vector in enumerate(normalized):
         if i == target_idx:
             similarities.append(-1.0)
         else:
             similarities.append(
                 cosine_similarity(
-                    target_vector,
+                    target,
                     vector,
                 )
             )
 
-    best_idx = int(np.argmax(similarities))
-
-    # Небольшая демонстрация матричного умножения.
-    weights = np.array(
-        [0.3, 0.4, 0.3],
-        dtype=float,
+    best_idx = int(
+        np.argmax(similarities)
     )
 
-    risk_matrix = np.column_stack(
+    matrix = np.column_stack(
         [
-            100 - df["attendance"].to_numpy(dtype=float),
-            10 - df["assignments_completed"].to_numpy(dtype=float),
-            np.maximum(
-                60 - df["final_score"].to_numpy(dtype=float),
-                0,
+            df["product_views"].to_numpy(
+                dtype=float
+            ),
+            df["clicks"].to_numpy(
+                dtype=float
+            ),
+            df["cart_additions"].to_numpy(
+                dtype=float
             ),
         ]
     )
 
-    risk_scores = matvec(
-        risk_matrix,
+    weights = np.array(
+        [0.2, 0.3, 0.5],
+        dtype=float,
+    )
+
+    scores = matvec(
+        matrix,
         weights,
     )
 
     return {
         "target_idx": target_idx,
         "best_idx": best_idx,
-        "similarities": similarities,
-        "risk_scores": risk_scores,
-        "risk_matrix": risk_matrix,
+        "similarity": similarities[best_idx],
+        "scores": scores,
+        "matrix": matrix,
         "weights": weights,
     }
 
 
 # ============================================================
-# 6. Сохранение результатов
+# 7. Визуализация
 # ============================================================
 
-def save_results(
+def save_visualizations(
     df: pd.DataFrame,
-    statistics: dict,
-    probability: dict,
-    ab_test: dict,
     regression: dict,
+    ab_test: dict,
     linear_algebra: dict,
 ) -> None:
+    """Сохранить графики проекта."""
 
-    # --------------------------------------------------------
-    # Добавляем risk_score
-    # --------------------------------------------------------
-
-    df = df.copy()
-
-    df["risk_score"] = linear_algebra["risk_scores"]
-
-    df["risk_level"] = pd.cut(
-        df["risk_score"],
-        bins=[
-            -np.inf,
-            10,
-            20,
-            np.inf,
+    save_histogram(
+        df.loc[
+            df["purchase"],
+            "purchase_amount",
         ],
-        labels=[
-            "low",
-            "medium",
-            "high",
+        title="Распределение суммы покупок",
+        xlabel="Сумма покупки",
+        path=REPORTS_DIR / "purchase_amount_hist.png",
+    )
+
+    save_scatter(
+        regression["x"],
+        regression["y"],
+        title="Просмотры и сумма покупки",
+        xlabel="Количество просмотров",
+        ylabel="Сумма покупки",
+        path=REPORTS_DIR / "views_purchase_scatter.png",
+    )
+
+    order = np.argsort(
+        regression["x"]
+    )
+
+    save_regression_plot(
+        regression["x"][order],
+        regression["y"][order],
+        regression["y_hat"][order],
+        path=REPORTS_DIR / "regression.png",
+    )
+
+    save_bar_chart(
+        ["A", "B"],
+        [
+            ab_test["mean_a"],
+            ab_test["mean_b"],
         ],
+        title="Средняя сумма покупки: A/B",
+        xlabel="Группа",
+        ylabel="Средняя сумма покупки",
+        path=REPORTS_DIR / "ab_means.png",
     )
-
-    # --------------------------------------------------------
-    # Основной файл
-    # --------------------------------------------------------
-
-    final_data_path = (
-        DATA_DIR
-        / "student_engagement_block04_with_risk.csv"
-    )
-
-    df.to_csv(
-        final_data_path,
-        index=False,
-    )
-
-    # --------------------------------------------------------
-    # Таблица вероятностей
-    # --------------------------------------------------------
-
-    prob_table = pd.DataFrame(
-        {
-            "metric": [
-                "P(pass)",
-                "P(pass | high attendance)",
-                "P(pass | low attendance)",
-            ],
-            "value": [
-                probability["p_pass"],
-                probability["p_pass_high_att"],
-                probability["p_pass_low_att"],
-            ],
-        }
-    )
-
-    prob_table_path = (
-        REPORTS_DIR
-        / "probability_table.csv"
-    )
-
-    prob_table.to_csv(
-        prob_table_path,
-        index=False,
-    )
-
-    # --------------------------------------------------------
-    # TOP-10 студентов по риску
-    # --------------------------------------------------------
-
-    risk_top10 = df.sort_values(
-        "risk_score",
-        ascending=False,
-    ).head(10)
-
-    risk_top10_path = (
-        REPORTS_DIR
-        / "risk_top10.csv"
-    )
-
-    risk_top10.to_csv(
-        risk_top10_path,
-        index=False,
-    )
-
-    # --------------------------------------------------------
-    # Текстовый отчёт
-    # --------------------------------------------------------
 
     target_idx = linear_algebra["target_idx"]
     best_idx = linear_algebra["best_idx"]
 
-    report_text = f"""
-# Сквозной проект блока 4
+    vectors = {
+        "target": linear_algebra["matrix"][target_idx][:2],
+        "similar": linear_algebra["matrix"][best_idx][:2],
+    }
 
-## 1. Данные
+    save_vectors_2d(
+        vectors,
+        REPORTS_DIR / "customer_vectors.png",
+    )
 
-Количество студентов: {len(df)}.
-Файл данных: {data_path}.
 
-## 2. Математическая статистика
+# ============================================================
+# 8. Отчёт
+# ============================================================
 
-Средний итоговый балл: {statistics["score_mean"]:.2f}.
-Медианный итоговый балл: {statistics["score_median"]:.2f}.
-Стандартное отклонение: {statistics["score_std"]:.2f}.
-
-95% bootstrap CI среднего итогового балла:
-[{statistics["ci_low"]:.2f}; {statistics["ci_high"]:.2f}].
-
-## 3. Теория вероятностей
-
-P(pass): {probability["p_pass"]:.3f}.
-P(pass | high attendance): {probability["p_pass_high_att"]:.3f}.
-P(pass | low attendance): {probability["p_pass_low_att"]:.3f}.
-
-## 4. A/B сравнение
-
-mean(A): {ab_test["mean_a"]:.2f}.
-mean(B): {ab_test["mean_b"]:.2f}.
-diff B - A: {ab_test["diff_obs"]:.2f}.
-p-value: {ab_test["p_value"]:.4f}.
-
-## 5. Корреляция и регрессия
-
-Корреляция practice_hours и final_score:
-{regression["corr"]:.3f}.
-
-Линейная модель:
-
-final_score = {regression["a"]:.3f} * practice_hours + {regression["b"]:.3f}.
-
-MSE: {regression["mse"]:.3f}.
-
-## 6. Линейная алгебра
-
-Матрица признаков содержит:
-{len(df)} студентов и 3 признака.
-
-Целевой студент:
-{df.loc[target_idx, "student_id"]}.
-
-Самый похожий студент:
-{df.loc[best_idx, "student_id"]}.
-
-Cosine similarity:
-{linear_algebra["similarities"][best_idx]:.3f}.
-
-Risk score рассчитан через
-risk_matrix @ weights.
-
-## 7. Вывод
-
-Проект показывает, как темы блока 4 работают вместе.
-
-Теория вероятностей используется для оценки вероятности успешной сдачи.
-
-Математическая статистика используется для описания итоговых баллов
-и оценки неопределённости среднего значения.
-
-A/B-сравнение позволяет сравнить результаты двух групп студентов.
-
-Корреляция и линейная регрессия позволяют исследовать связь
-между временем практики и итоговым баллом.
-
-Линейная алгебра позволяет представить студентов как векторы признаков,
-сравнить их через cosine similarity и рассчитать риск через
-матричное умножение.
-
-## 8. Файлы результата
-
-Основные данные:
-{final_data_path}
-
-Таблица вероятностей:
-{prob_table_path}
-
-TOP-10 студентов по риску:
-{risk_top10_path}
-
-Отчёт:
-{REPORTS_DIR / "block04_cross_project_report.md"}
-"""
+def save_report(
+    df: pd.DataFrame,
+    statistics: dict,
+    probability: dict,
+    bayes: dict,
+    regression: dict,
+    ab_test: dict,
+    linear_algebra: dict,
+) -> None:
+    """Сохранить итоговый Markdown-отчёт."""
 
     report_path = (
         REPORTS_DIR
-        / "block04_cross_project_report.md"
+        / "block04_customer_project_report.md"
     )
 
+    text = f"""
+# Сквозной проект блока 4 — анализ покупателей
+
+## 1. Данные
+
+Количество покупателей: {len(df)}.
+
+Количество покупок: {statistics["n_purchases"]}.
+
+## 2. Математическая статистика
+
+Средняя сумма покупки:
+{statistics["mean"]:.2f}
+
+Медиана:
+{statistics["median"]:.2f}
+
+Стандартное отклонение:
+{statistics["std"]:.2f}
+
+Усечённое среднее:
+{statistics["trimmed_mean"]:.2f}
+
+95% bootstrap CI среднего:
+[{statistics["ci_low"]:.2f}; {statistics["ci_high"]:.2f}]
+
+## 3. Теория вероятностей
+
+P(purchase):
+{probability["p_purchase"]:.3f}
+
+P(purchase | click):
+{probability["p_purchase_click"]:.3f}
+
+P(purchase | no click):
+{probability["p_purchase_no_click"]:.3f}
+
+## 4. Формула Байеса
+
+P(purchase | clicked):
+{bayes["p_purchase_given_clicked"]:.3f}
+
+Bayes posterior:
+{bayes["bayes_posterior"]:.3f}
+
+Laplace-smoothed probability:
+{bayes["laplace_probability"]:.3f}
+
+## 5. Корреляция и регрессия
+
+Корреляция просмотров и суммы покупки:
+{regression["correlation"]:.3f}
+
+Линейная модель:
+
+purchase_amount =
+{regression["a"]:.3f} * product_views
++ {regression["b"]:.3f}
+
+MSE:
+{regression["mse"]:.3f}
+
+## 6. A/B-тестирование
+
+Средняя сумма группы A:
+{ab_test["mean_a"]:.2f}
+
+Средняя сумма группы B:
+{ab_test["mean_b"]:.2f}
+
+Разница B - A:
+{ab_test["diff"]:.2f}
+
+p-value:
+{ab_test["p_value"]:.4f}
+
+Решение:
+{ab_test["decision"]}
+
+Cohen's d:
+{ab_test["cohens_d"]:.3f}
+
+## 7. Линейная алгебра
+
+Целевой покупатель:
+{int(df.loc[linear_algebra["target_idx"], "customer_id"])}
+
+Самый похожий покупатель:
+{int(df.loc[linear_algebra["best_idx"], "customer_id"])}
+
+Cosine similarity:
+{linear_algebra["similarity"]:.3f}
+
+Итоговый score рассчитан через
+матричное умножение матрицы признаков на вектор весов.
+
+## 8. Вывод
+
+Проект объединяет основные темы блока 4
+на одном наборе данных покупателей.
+
+Использованы статистика, вероятности,
+формула Байеса, bootstrap, корреляция,
+линейная регрессия, A/B-тестирование,
+Cohen's d, cosine similarity,
+матричное умножение и визуализация.
+
+## 9. Файлы
+
+Данные:
+{DATA_PATH}
+
+Отчёт:
+{report_path}
+"""
+
     report_path.write_text(
-        report_text,
+        text.strip(),
         encoding="utf-8",
     )
 
-    print(report_text)
-
-    print("\nФайлы сохранены:")
-    print("-", final_data_path)
-    print("-", prob_table_path)
-    print("-", risk_top10_path)
-    print("-", report_path)
+    print(
+        f"Отчёт сохранён: {report_path}"
+    )
 
 
 # ============================================================
@@ -542,44 +797,66 @@ TOP-10 студентов по риску:
 # ============================================================
 
 def main() -> None:
-
     print("=" * 60)
-    print("СКВОЗНОЙ ПРОЕКТ БЛОКА 4")
+    print("СКВОЗНОЙ ПРОЕКТ БЛОКА 4 — ПОКУПАТЕЛИ")
     print("=" * 60)
 
-    print("\n1. Загрузка данных...")
-
-    df = load_data()
+    print("\n1. Генерация данных...")
+    df = generate_data()
 
     print(
-        f"Загружено студентов: {len(df)}"
+        f"Покупателей: {len(df)}"
     )
 
     print("\n2. Математическая статистика...")
-
     statistics = calculate_statistics(df)
 
     print(
-        f"Средний балл: "
-        f"{statistics['score_mean']:.2f}"
+        f"Средняя сумма покупки: "
+        f"{statistics['mean']:.2f}"
     )
 
     print(
-        f"Медианный балл: "
-        f"{statistics['score_median']:.2f}"
+        f"Bootstrap CI: "
+        f"[{statistics['ci_low']:.2f}; "
+        f"{statistics['ci_high']:.2f}]"
     )
 
     print("\n3. Теория вероятностей...")
-
     probability = calculate_probability(df)
 
     print(
-        f"P(pass) = "
-        f"{probability['p_pass']:.3f}"
+        f"P(purchase) = "
+        f"{probability['p_purchase']:.3f}"
     )
 
-    print("\n4. A/B-сравнение...")
+    print(
+        f"P(purchase | click) = "
+        f"{probability['p_purchase_click']:.3f}"
+    )
 
+    print("\n4. Формула Байеса...")
+    bayes = calculate_bayes(df)
+
+    print(
+        f"P(purchase | clicked) = "
+        f"{bayes['p_purchase_given_clicked']:.3f}"
+    )
+
+    print("\n5. Корреляция и регрессия...")
+    regression = calculate_regression(df)
+
+    print(
+        f"Correlation = "
+        f"{regression['correlation']:.3f}"
+    )
+
+    print(
+        f"MSE = "
+        f"{regression['mse']:.3f}"
+    )
+
+    print("\n6. A/B-тестирование...")
     ab_test = calculate_ab_test(df)
 
     print(
@@ -597,49 +874,50 @@ def main() -> None:
         f"{ab_test['p_value']:.4f}"
     )
 
-    print("\n5. Корреляция и регрессия...")
-
-    regression = calculate_regression(df)
-
     print(
-        f"Correlation = "
-        f"{regression['corr']:.3f}"
+        f"Решение: "
+        f"{ab_test['decision']}"
     )
 
-    print(
-        f"MSE = "
-        f"{regression['mse']:.3f}"
-    )
-
-    print("\n6. Линейная алгебра...")
-
+    print("\n7. Линейная алгебра...")
     linear_algebra = calculate_linear_algebra(df)
 
-    best_idx = linear_algebra["best_idx"]
-
     print(
-        "Самый похожий студент:",
-        df.loc[best_idx, "student_id"],
+        "Самый похожий покупатель:",
+        int(
+            df.loc[
+                linear_algebra["best_idx"],
+                "customer_id",
+            ]
+        ),
     )
 
     print(
         "Cosine similarity:",
-        f"{linear_algebra['similarities'][best_idx]:.3f}",
+        f"{linear_algebra['similarity']:.3f}",
     )
 
-    print("\n7. Сохранение результатов...")
+    print("\n8. Визуализация...")
+    save_visualizations(
+        df,
+        regression,
+        ab_test,
+        linear_algebra,
+    )
 
-    save_results(
+    print("\n9. Отчёт...")
+    save_report(
         df,
         statistics,
         probability,
-        ab_test,
+        bayes,
         regression,
+        ab_test,
         linear_algebra,
     )
 
     print("\n" + "=" * 60)
-    print("Сквозной проект блока 4 выполнен успешно.")
+    print("ПРОЕКТ БЛОКА 4 ВЫПОЛНЕН")
     print("=" * 60)
 
 
