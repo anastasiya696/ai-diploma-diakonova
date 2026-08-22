@@ -1,0 +1,4 @@
+metric,value
+P(pass),0.98
+P(pass | high attendance),0.972972972972973
+P(pass | low attendance),0.9841269841269841

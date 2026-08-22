@@ -1,1 +1,1 @@
-# empty file
+"""Block 4 customer project package."""
