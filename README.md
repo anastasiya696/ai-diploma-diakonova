@@ -1,67 +1,45 @@
-# Block 4 Customer Project
+# Block 05 — Анализ продаж магазина «Детский мир»
 
-## Назначение
+## Цель проекта
 
-Итоговый проект блока 4 по анализу поведения покупателей
-магазина «Детский мир».
+Провести анализ данных о продажах магазина «Детский мир»,
+используя Excel как источник данных и Python для обработки,
+анализа и визуализации.
 
-Проект объединяет математическую статистику,
-теорию вероятностей, формулу Байеса, bootstrap,
-корреляцию, линейную регрессию, A/B-тестирование
-и линейную алгебру.
+## Используемые инструменты
 
-## Используемые занятия
-
-В проекте используются материалы занятий 1-11 блока 4.
-
-1. Математическая статистика
-2. Распределения и визуализация
-3. Теория вероятностей
-4. Формула Байеса
-5. Bootstrap и доверительные интервалы
-6. Ковариация и корреляция Пирсона
-7. Линейная регрессия 1D
-8. A/B-тестирование и permutation test
-9. Линейная алгебра
-10. Нормальное распределение и A/B-сравнение
-11. Векторы 2D
-
-Продвинутые мини-проекты и занятие 12
-в данной работе не используются.
-
-## Предметная область
-
-Проект анализирует поведение покупателей:
-
-- просмотры товаров;
-- клики;
-- добавления товаров в корзину;
-- скидки;
-- просмотры отзывов;
-- факт покупки;
-- сумму покупки;
-- принадлежность к группе A или B.
+- Python
+- pandas
+- openpyxl
+- matplotlib
+- Jupyter Notebook
+- Excel
+- Git / GitHub
 
 ## Структура проекта
 
 ```text
-block04_customer_project/
-├── README.md
-├── requirements.txt
-├── .gitignore
-├── main.py
-├── src/
-│   ├── __init__.py
-│   ├── block04_stats.py
-│   ├── block04_probability.py
-│   ├── block04_bayes.py
-│   ├── block04_bootstrap.py
-│   ├── block04_correlation.py
-│   ├── block04_regression.py
-│   ├── block04_hypothesis.py
-│   ├── block04_linear_algebra.py
-│   └── block04_visualization.py
-├── tests/
-│   └── test_block04_core.py
+ai-diploma-diakonova/
 ├── data/
-└── reports/
+│   ├── sales_data.xlsx
+│   └── sales_data.csv
+├── notebooks/
+│   └── block05_exam_analysis.ipynb
+├── reports/
+│   ├── cleaned_sales_data.csv
+│   ├── sales_by_category.csv
+│   ├── sales_by_manager.csv
+│   ├── sales_by_month.csv
+│   ├── pivot_city_category.csv
+│   ├── revenue_by_category.png
+│   ├── revenue_by_manager.png
+│   ├── revenue_by_month.png
+│   └── final_report.md
+├── src/
+│   ├── load_data.py
+│   ├── clean_data.py
+│   ├── analysis.py
+│   └── charts.py
+├── main.py
+├── requirements.txt
+└── README.md
